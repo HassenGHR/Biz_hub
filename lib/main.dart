@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
-            initialRoute: '/',
+            initialRoute: '/splash',
             onGenerateRoute: AppRoutes.onGenerateRoute,
           );
         },

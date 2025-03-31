@@ -7,6 +7,7 @@ import 'package:biz_hub/screens/company/edit_comapny_details_screen.dart';
 import 'package:biz_hub/screens/home/home_screen.dart';
 import 'package:biz_hub/screens/profile/edit-profile_screen.dart';
 import 'package:biz_hub/screens/profile/user_profile_screen.dart';
+import 'package:biz_hub/screens/splash/splash_screen.dart';
 import 'package:biz_hub/screens/tools/resume_builder_screen.dart';
 import 'package:biz_hub/screens/tools/tools_dashboard_screen.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +41,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => SignupScreen());
       case forgotPassword:
         return MaterialPageRoute(builder: (_) => ForgotPasswordScreen());
-
+      case splash:
+        return MaterialPageRoute(builder: (_) => SplashScreen());
       // Home Route
       case home:
         return MaterialPageRoute(builder: (_) => HomeScreen());
@@ -72,8 +74,7 @@ class AppRoutes {
       // Profile Routes
       case userProfile:
         if (args is String) {
-          return MaterialPageRoute(
-              builder: (_) => UserProfileScreen(userId: args));
+          return MaterialPageRoute(builder: (_) => UserProfileScreen());
         }
         return _errorRoute();
       // case editProfile:

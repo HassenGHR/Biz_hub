@@ -1,38 +1,65 @@
+import 'dart:convert';
+
 import 'package:biz_hub/models/company.dart';
 import 'package:biz_hub/models/comment.dart'; // Make sure to import the Comment model
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:flutter/services.dart';
 
 class CompanyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
 
   // Get companies with pagination
+
   Future<List<Company>> getCompanies({
-    int limit = 10,
-    DocumentSnapshot? lastDocument,
     String? category,
     String? searchQuery,
   }) async {
-    Query query =
-        _firestore.collection('companies').orderBy('name').limit(limit);
+    // Load JSON from local assets
+    String jsonString =
+        await rootBundle.loadString('assets/json/companies.json');
+    Map<String, dynamic> jsonData = json.decode(jsonString);
 
-    if (lastDocument != null) {
-      query = query.startAfterDocument(lastDocument);
-    }
+    // Flatten JSON into a list of companies
+    List<Company> companies = [];
 
+    jsonData.forEach((categoryKey, companyList) {
+      for (var companyData in companyList) {
+        companies.add(
+          Company(
+            id: companyData['id'] ?? '',
+            name: companyData['companyName'] ?? '',
+            category: categoryKey,
+            address: companyData['address'] ?? '',
+            phone: companyData['phone'] ?? '',
+            ratings: 0.0, // Default rating if not provided
+            imageUrl: companyData['imageUrl'] ?? '',
+            thumbsUp: 0,
+            thumbsDown: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            createdBy: "system",
+            lastUpdatedBy: "system",
+          ),
+        );
+      }
+    });
+
+    // Apply category filter
     if (category != null && category.isNotEmpty) {
-      query = query.where('category', isEqualTo: category);
+      companies =
+          companies.where((company) => company.category == category).toList();
     }
 
+    // Apply search query filter
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      // Using array-contains with keywords field or similar implementation
-      // Note: Firestore doesn't support direct text search, consider using Algolia for production
-      query = query.where('keywords', arrayContains: searchQuery.toLowerCase());
+      companies = companies.where((company) {
+        return company.name.toLowerCase().contains(searchQuery.toLowerCase());
+      }).toList();
     }
 
-    final snapshot = await query.get();
-    return snapshot.docs.map((doc) => Company.fromFirestore(doc)).toList();
+    return companies;
   }
 
   // Get company by ID

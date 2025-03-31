@@ -41,19 +41,19 @@ class Company {
 
   // Create from Firestore document
   factory Company.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map;
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>? ?? {};
     return Company(
       id: doc.id,
       name: data['name'] ?? '',
-      email: data['email'] ?? '',
-      description: data['description'] ?? '',
+      email: data['email'] as String?,
+      description: data['description'] as String?,
       category: data['category'] ?? '',
       address: data['address'] ?? '',
       phone: data['phone'] ?? '',
-      ratings: data['ratings'] ?? 0.0,
-      website: data['website'] ?? '',
+      ratings: (data['ratings'] as num?)?.toDouble() ?? 0.0,
+      website: data['website'] as String?,
       imageUrl: data['imageUrl'] ?? '',
-      location: data['location'] ?? const GeoPoint(0, 0),
+      location: data['location'] as GeoPoint?,
       thumbsUp: data['thumbsUp'] ?? 0,
       thumbsDown: data['thumbsDown'] ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -74,7 +74,7 @@ class Company {
       'website': website,
       'email': email,
       'ratings': ratings,
-      'imageUrls': imageUrl,
+      'imageUrl': imageUrl,
       'location': location,
       'thumbsUp': thumbsUp,
       'thumbsDown': thumbsDown,

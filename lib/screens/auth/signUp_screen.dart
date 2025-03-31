@@ -138,7 +138,7 @@ class _SignupScreenState extends State<SignupScreen> {
       }
 
       if (mounted) {
-        context.go(AppRoutes.home);
+        AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
       }
     } catch (e) {
       setState(() {
@@ -371,7 +371,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 // Social Signup Buttons
                 SocialLoginButton(
                   onPressed: _signupWithGoogle,
-                  icon: 'assets/icons/google_logo.png',
+                  icon: 'assets/icons/google-logo.png',
                   text: 'Continue with Google',
                   isLoading: _isLoading,
                 ),
@@ -383,7 +383,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     const Text('Already have an account?'),
                     TextButton(
-                      onPressed: () => context.push(AppRoutes.login),
+                      onPressed: () {
+                        AppRoutes.navigateTo(context, AppRoutes.login);
+                      },
                       child: const Text('Log In'),
                     ),
                   ],

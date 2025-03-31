@@ -124,7 +124,7 @@ class ResumeData {
     };
   }
 
-  factory ResumeData.fromJson(Map<String, dynamic> json) {
+  factory ResumeData.fromJson(Map<dynamic, dynamic> json) {
     return ResumeData(
       id: json['id'] ?? '',
       templateId: json['templateId'] ?? 'modern',

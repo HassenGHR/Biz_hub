@@ -1,12 +1,15 @@
 import 'package:biz_hub/config/routes.dart';
 import 'package:biz_hub/config/theme.dart';
 import 'package:biz_hub/models/company.dart';
+import 'package:biz_hub/models/user.dart';
 import 'package:biz_hub/screens/company/add_comapny_screen.dart';
 import 'package:biz_hub/screens/home/menu/menu_screen.dart';
 import 'package:biz_hub/screens/home/notifications/notifications_screen.dart';
 import 'package:biz_hub/screens/profile/user_profile_screen.dart';
 import 'package:biz_hub/screens/tools/tools_dashboard_screen.dart';
+import 'package:biz_hub/services/auth_service.dart';
 import 'package:biz_hub/services/comapny_service.dart';
+import 'package:biz_hub/services/user_service.dart';
 import 'package:biz_hub/widgets/company_card.dart';
 import 'package:biz_hub/widgets/filter_widget.dart';
 import 'package:flutter/material.dart';
@@ -273,6 +276,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     try {
       final companies = await _companyService.getCompanies();
+
+      print("len:----------------------${companies.length}");
       setState(() {
         _companies = companies;
         _filteredCompanies = companies;

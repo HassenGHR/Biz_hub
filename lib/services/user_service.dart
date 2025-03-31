@@ -50,7 +50,7 @@ class UserService {
           name: displayName ?? authUser.name ?? 'User',
           photoUrl: authUser.photoUrl,
           createdAt: DateTime.now(),
-          reputation: 0,
+          reputation: 1,
           contributions: [],
           // isVerified: false,
           savedCompanies: [],

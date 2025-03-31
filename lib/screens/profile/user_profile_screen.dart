@@ -1,5 +1,6 @@
 import 'package:biz_hub/models/company.dart';
 import 'package:biz_hub/models/user.dart';
+import 'package:biz_hub/services/auth_service.dart';
 import 'package:biz_hub/services/comapny_service.dart';
 import 'package:biz_hub/services/user_service.dart';
 import 'package:biz_hub/widgets/company_card.dart';
@@ -7,9 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final String userId;
-
-  const UserProfileScreen({Key? key, required this.userId}) : super(key: key);
+  const UserProfileScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
@@ -45,19 +46,26 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     });
 
     try {
+      _user = await AuthService().getCachedUser();
+      if (_user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load user data')),
+        );
+        return;
+      }
+
       // Check if this is the current user's profile
-      _isCurrentUser = _userService.currentUser?.uid == widget.userId;
+      _isCurrentUser = _userService.currentUser?.uid == _user!.id;
 
       // Get user profile
-      _user = await _userService.getUserById(widget.userId);
 
       // Get user contributions
-      _contributions = await _userService.getUserContributions(widget.userId);
+      _contributions = await _userService.getUserContributions(_user!.id);
 
       // Get saved companies if this is the current user
       if (_isCurrentUser && _user != null) {
         List<String> savedCompanyIds =
-            await _userService.getSavedCompanies(widget.userId);
+            await _userService.getSavedCompanies(_user!.id);
         List<Company> companies = [];
 
         for (String id in savedCompanyIds) {
@@ -349,7 +357,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               onPressed: () async {
                 Navigator.of(context).pop();
                 try {
-                  await _userService.removeUserResume(widget.userId, resumeId);
+                  await _userService.removeUserResume(_user!.id, resumeId);
                   _loadUserData(); // Refresh data
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Resume deleted')),

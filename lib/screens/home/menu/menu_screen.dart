@@ -1,8 +1,47 @@
 import 'package:biz_hub/config/routes.dart';
+import 'package:biz_hub/models/user.dart';
+import 'package:biz_hub/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
-class MenuScreen extends StatelessWidget {
+class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
+
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  late User _user;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with default values
+    _user = User(
+      id: 'default-id',
+      name: 'Alex Johnson',
+      email: 'alex.johnson@example.com',
+      photoUrl: 'https://example.com/default-photo.png',
+      reputation: 1,
+      contributions: [],
+      savedCompanies: [],
+      savedResumes: [],
+      createdAt: DateTime.now(),
+    );
+    // Load user data
+    loadUser();
+  }
+
+  void loadUser() async {
+    final cachedUser = await AuthService().getCachedUser();
+    setState(() {
+      if (cachedUser != null) {
+        _user = cachedUser;
+      }
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,9 +51,10 @@ class MenuScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const Icon(Icons.logout_outlined),
             onPressed: () {
-              // Navigate to notifications
+              AuthService().signOut();
+              AppRoutes.navigateAndRemoveUntil(context, AppRoutes.splash);
             },
           ),
           IconButton(
@@ -98,63 +138,68 @@ class MenuScreen extends StatelessWidget {
           color: Colors.blue.shade50,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.blue.shade100,
-              child: const Icon(Icons.person, size: 36, color: Colors.blue),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: _user == null
+            ? CircularProgressIndicator()
+            : Row(
                 children: [
-                  const Text(
-                    'Alex Johnson',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.blue.shade100,
+                    child:
+                        const Icon(Icons.person, size: 36, color: Colors.blue),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _user.name,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.star,
+                                size: 16, color: Colors.amber.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Reputation: ${_user.reputation}',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.edit_note,
+                                size: 16, color: Colors.blue.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_user.contributions.length} Contributions',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.star, size: 16, color: Colors.amber.shade700),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Reputation: 428',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.edit_note,
-                          size: 16, color: Colors.blue.shade700),
-                      const SizedBox(width: 4),
-                      Text(
-                        '32 Contributions',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    icon:
+                        Icon(Icons.chevron_right, color: Colors.grey.shade700),
+                    onPressed: () {
+                      // Navigate to profile
+                    },
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              icon: Icon(Icons.chevron_right, color: Colors.grey.shade700),
-              onPressed: () {
-                // Navigate to profile
-              },
-            ),
-          ],
-        ),
       ),
     );
   }

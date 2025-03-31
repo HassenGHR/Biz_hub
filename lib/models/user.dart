@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:biz_hub/models/resume.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -34,7 +36,29 @@ class User {
         contributions: List<String>.from(data['contributions'] ?? []),
         savedCompanies: List<String>.from(data['savedCompanies'] ?? []),
         savedResumes: List<ResumeData>.from(data['savedResumes'] ?? []),
-        createdAt: data['createdAt'] ?? DateTime.now());
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : DateTime.now());
+  }
+
+  factory User.fromPrefs(String json) {
+    Map<String, dynamic> data = jsonDecode(json);
+    return User(
+      id: data['id'] ?? '',
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      photoUrl: data['photoUrl'] ?? '',
+      reputation: data['reputation'] ?? 0,
+      contributions: List<String>.from(data['contributions'] ?? []),
+      savedCompanies: List<String>.from(data['savedCompanies'] ?? []),
+      savedResumes: (data['savedResumes'] as List?)
+              ?.map((e) => ResumeData.fromJson(e))
+              .toList() ??
+          [],
+      createdAt: data['createdAt'] != null
+          ? DateTime.parse(data['createdAt'])
+          : DateTime.now(),
+    );
   }
 
   Map<String, dynamic> toFirestore() {
@@ -45,8 +69,10 @@ class User {
       'reputation': reputation,
       'contributions': contributions,
       'savedCompanies': savedCompanies,
-      'savedResumes': savedResumes,
-      'createdAt': createdAt
+      'savedResumes': savedResumes
+          .map((resume) => resume.toJson())
+          .toList(), // Make sure ResumeData is also serializable
+      'createdAt': createdAt.toIso8601String() // Convert DateTime to string
     };
   }
 }
