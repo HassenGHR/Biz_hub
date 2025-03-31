@@ -168,6 +168,60 @@ class StaggeredAnimationItem extends StatelessWidget {
   }
 }
 
+// Category chip widget
+class CategoryChip extends StatelessWidget {
+  final String category;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const CategoryChip({
+    Key? key,
+    required this.category,
+    required this.isSelected,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 150),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            color: isSelected
+                ? AppColors.primaryColor.withOpacity(0.1)
+                : Colors.transparent,
+            border: Border.all(
+              color: isSelected ? AppColors.primaryColor : theme.dividerColor,
+              width: 1,
+            ),
+          ),
+          child: Text(
+            category,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? AppColors.primaryColor : theme.hintColor,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // Main HomeScreen implementation
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -185,9 +239,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Tab controller for category selection
-  late TabController _tabController;
-
   // State variables
   List<Company> _companies = [];
   List<Company> _filteredCompanies = [];
@@ -195,17 +246,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isLoading = true;
   int _currentIndex = 0;
   bool _showSearchBar = false;
-  final List<String> _categories = [
-    'All',
-    'Technology',
-    'Retail',
-    'Healthcare',
-    'Food',
-    'Services'
-  ];
+
+  List<String> _categories = [];
 
   // Scroll controller for handling app bar collapse
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _categoryScrollController = ScrollController();
   bool _isScrolled = false;
 
   @override
@@ -225,15 +271,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-
-    // Initialize tab controller
-    _tabController = TabController(length: _categories.length, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        HapticFeedback.lightImpact();
-        _selectCategory(_categories[_tabController.index]);
-      }
-    });
 
     // Listen to scroll to handle app bar appearance
     _scrollController.addListener(_listenToScrollChange);
@@ -263,31 +300,63 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _animationController.dispose();
-    _tabController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
+    _categoryScrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadCompanies() async {
+  Future<void> _loadCompanies({String? selectedCategory}) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
+      _currentCategory = "All";
+      _selectCategory(_currentCategory);
+      _categories = await CompanyService().getCategories();
+      _categories.insert(0, "All"); // Add "All" as the first option
+
       final companies = await _companyService.getCompanies();
 
-      print("len:----------------------${companies.length}");
       setState(() {
         _companies = companies;
-        _filteredCompanies = companies;
+
+        // Apply category filter
+        _filteredCompanies =
+            (selectedCategory == null || selectedCategory == "All")
+                ? companies
+                : companies
+                    .where((company) => company.category == selectedCategory)
+                    .toList();
+
         _isLoading = false;
+      });
+
+      // Scroll to selected category after loading
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToCategoryIfNeeded();
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
       _showErrorSnackBar('Error loading companies: ${e.toString()}');
+    }
+  }
+
+  void _scrollToCategoryIfNeeded() {
+    if (_currentCategory != 'All' && _categoryScrollController.hasClients) {
+      final index = _categories.indexOf(_currentCategory);
+      if (index > 0) {
+        // Approximate position calculation
+        final estimatedPosition = (index * 120.0) - 100;
+        _categoryScrollController.animateTo(
+          estimatedPosition > 0 ? estimatedPosition : 0,
+          duration: AppDurations.short,
+          curve: Curves.easeInOut,
+        );
+      }
     }
   }
 
@@ -321,11 +390,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _selectCategory(String category) {
+    if (category == _currentCategory) return;
+
     setState(() {
       _currentCategory = category;
-      _tabController.index = _categories.indexOf(category);
     });
     _filterCompanies();
+
+    // Add haptic feedback
+    HapticFeedback.selectionClick();
+
+    // Delay scrolling to ensure UI is updated
+    Future.delayed(const Duration(milliseconds: 50), () {
+      _scrollToCategoryIfNeeded();
+    });
   }
 
   void _onFilterApplied(String? category, String? sortBy, double? minRating) {
@@ -364,8 +442,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // Grid settings based on screen size
     final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : 3);
-    final childAspectRatio = isMobile ? 1.2 : 1.0;
-
+// Try these values for better results
+    final childAspectRatio = isMobile ? 3.0 : 0.9;
     return Scaffold(
       body: AnimatedBuilder(
         animation: _animationController,
@@ -410,29 +488,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         const Spacer(),
-                        AnimatedContainer(
-                          duration: AppDurations.short,
-                          width: _showSearchBar && _isScrolled ? 200 : 0,
-                          child: _showSearchBar && _isScrolled
-                              ? TextField(
-                                  controller: _searchController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Search...',
-                                    hintStyle: TextStyle(fontSize: 14),
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 8,
+                        // Compact search bar
+                        Flexible(
+                          child: AnimatedContainer(
+                            duration: AppDurations.short,
+                            width: _showSearchBar && _isScrolled ? 200 : 0,
+                            child: _showSearchBar && _isScrolled
+                                ? TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search...',
+                                      hintStyle: TextStyle(fontSize: 14),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 8,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      filled: true,
+                                      fillColor: theme.colorScheme.surface,
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.clear, size: 16),
+                                        padding: EdgeInsets.zero,
+                                        constraints: BoxConstraints(),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          _filterCompanies();
+                                        },
+                                      ),
                                     ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    filled: true,
-                                    fillColor: theme.colorScheme.surface,
-                                  ),
-                                )
-                              : const SizedBox(),
+                                  )
+                                : const SizedBox(),
+                          ),
                         ),
                         IconButton(
                           icon: Icon(_showSearchBar && _isScrolled
@@ -491,6 +581,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 icon: const Icon(Icons.refresh),
                                 onPressed: () {
                                   HapticFeedback.lightImpact();
+                                  setState(() {
+                                    _currentCategory = "All";
+                                    _selectCategory(_currentCategory);
+                                  });
                                   _loadCompanies();
                                 },
                               ),
@@ -537,64 +631,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   bottom: PreferredSize(
                     preferredSize: const Size.fromHeight(48),
                     child: Container(
+                      color: theme.scaffoldBackgroundColor,
+                      child: Container(
+                        height: 48,
                         color: theme.scaffoldBackgroundColor,
-                        child:
-                            // Replace the TabBar in your code with this horizontal scrollable list of category containers
-                            Container(
-                          height: 48,
-                          color: theme.scaffoldBackgroundColor,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Row(
-                              children: _categories.map((category) {
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 4),
-                                  child: InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _currentCategory = category;
-                                      });
-                                      // Add any additional logic needed when category changes
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(30),
-                                        color: _currentCategory == category
-                                            ? AppColors.primaryColor
-                                                .withOpacity(0.1)
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: _currentCategory == category
-                                              ? AppColors.primaryColor
-                                              : theme.dividerColor,
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        category,
-                                        style: TextStyle(
-                                          color: _currentCategory == category
-                                              ? AppColors.primaryColor
-                                              : theme.hintColor,
-                                          fontWeight:
-                                              _currentCategory == category
-                                                  ? FontWeight.bold
-                                                  : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
+                        child: SingleChildScrollView(
+                          controller: _categoryScrollController,
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            children: _categories.map((category) {
+                              return CategoryChip(
+                                category: category,
+                                isSelected: _currentCategory == category,
+                                onTap: () => _selectCategory(category),
+                              );
+                            }).toList(),
                           ),
-                        )),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ];
@@ -628,7 +684,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 itemCount: _filteredCompanies.length,
                                 physics: const AlwaysScrollableScrollPhysics(),
-                                padding: const EdgeInsets.only(bottom: 100),
+                                padding: const EdgeInsets.only(bottom: 10),
                                 itemBuilder: (context, index) {
                                   final company = _filteredCompanies[index];
                                   return StaggeredAnimationItem(
@@ -652,192 +708,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-      // floatingActionButton: AnimatedContainer(
-      //   duration: AppDurations.medium,
-      //   curve: Curves.easeInOut,
-      //   transform: Matrix4.translationValues(
-      //     0,
-      //     _isScrolled ? 0 : 20,
-      //     0,
-      //   ),
-      //   child: FloatingActionButton.extended(
-      //     onPressed: () {
-      //       HapticFeedback.mediumImpact();
-      //       Navigator.pushNamed(context, '/add-company');
-      //     },
-      //     icon: const Icon(Icons.add),
-      //     label: const Text('Add Company'),
-      //     elevation: 1,
-      //     backgroundColor: AppColors.primaryColor,
-      //   ),
-      // ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        elevation: 8.0,
-        color: theme.colorScheme.surface,
-        child: Container(
-          height: 60,
-          padding: const EdgeInsets.symmetric(horizontal: 2.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, Icons.home, 'Home'),
-              _buildNavItem(1, Icons.build, 'Tools'),
-              _buildNavItem(2, Icons.add, 'Add'),
-              _buildNavItem(3, Icons.notifications, 'Notifications'),
-              _buildNavItem(4, Icons.menu, 'Menu'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _currentIndex == index;
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: () => _onNavItemTapped(index),
-      borderRadius: BorderRadius.circular(16),
-      splashColor: AppColors.primaryColor.withOpacity(0.1),
-      highlightColor: AppColors.primaryColor.withOpacity(0.05),
-      child: AnimatedContainer(
-        duration: AppDurations.short,
-        padding: const EdgeInsets.symmetric(
-            horizontal: 16.0, vertical: 4.0), // Reduced vertical padding
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isSelected
-              ? AppColors.primaryColor.withOpacity(0.1)
-              : Colors.transparent,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primaryColor : theme.hintColor,
-              size: 20, // Slightly smaller icon
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: Offset(0, -2),
             ),
-            const SizedBox(height: 2), // Reduced spacing
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.primaryColor : theme.hintColor,
-                fontSize: 11, // Slightly smaller text
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: _onNavItemTapped,
+          elevation: 8,
+          backgroundColor: theme.colorScheme.surface,
+          selectedItemColor: AppColors.primaryColor,
+          unselectedItemColor: theme.hintColor,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.build),
+              label: 'Tools',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.add),
+              label: 'Add',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.notifications),
+              label: 'Notifications',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.menu),
+              label: 'Menu',
             ),
           ],
         ),
       ),
     );
-  }
-
-  void _onNavItemTapped(int index) {
-    if (index == _currentIndex) return;
-
-    HapticFeedback.selectionClick();
-    setState(() {
-      _currentIndex = index;
-    });
-
-    if (index == 1) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              ToolsDashboardScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOutCubic;
-
-            var tween =
-                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-
-            return SlideTransition(
-              position: offsetAnimation,
-              child: child,
-            );
-          },
-          transitionDuration: AppDurations.medium,
-        ),
-      );
-    } else if (index == 2) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              AddCompanyScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOutCubic;
-
-            var tween =
-                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-
-            return SlideTransition(
-              position: offsetAnimation,
-              child: child,
-            );
-          },
-          transitionDuration: AppDurations.medium,
-        ),
-      );
-    } else if (index == 3) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const NotificationsScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOutCubic;
-
-            var tween =
-                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-
-            return SlideTransition(
-              position: offsetAnimation,
-              child: child,
-            );
-          },
-          transitionDuration: AppDurations.medium,
-        ),
-      );
-    } else if (index == 4) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const MenuScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOutCubic;
-
-            var tween =
-                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-
-            return SlideTransition(
-              position: offsetAnimation,
-              child: child,
-            );
-          },
-          transitionDuration: AppDurations.medium,
-        ),
-      );
-    }
   }
 
   Widget _buildEmptyState() {
@@ -856,14 +769,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          Text(
-            _searchController.text.isNotEmpty || _currentCategory != 'All'
-                ? 'Try changing your search or filters'
-                : 'Add a new company to get started',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.neutralMedium,
-                ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _searchController.text.isNotEmpty || _currentCategory != 'All'
+                  ? 'Try changing your search or filters'
+                  : 'Add a new company to get started',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.neutralMedium,
+                  ),
+            ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -918,6 +834,67 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         },
       ),
+    );
+  }
+
+  void _onNavItemTapped(int index) {
+    if (index == _currentIndex) return;
+
+    HapticFeedback.selectionClick();
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // Navigate based on index
+    switch (index) {
+      case 0: // Home - already here
+        break;
+      case 1: // Tools
+        Navigator.push(
+          context,
+          _createPageRoute(const ToolsDashboardScreen()),
+        );
+        break;
+      case 2: // Add Company
+        Navigator.push(
+          context,
+          _createPageRoute(const AddCompanyScreen()),
+        );
+        break;
+      case 3: // Notifications
+        Navigator.push(
+          context,
+          _createPageRoute(const NotificationsScreen()),
+        );
+        break;
+      case 4: // Menu
+        Navigator.push(
+          context,
+          _createPageRoute(const MenuScreen()),
+        );
+        break;
+    }
+  }
+
+  // Helper method to create consistent page routes
+  PageRoute _createPageRoute(Widget screen) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => screen,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOutCubic;
+
+        var tween =
+            Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+
+        return SlideTransition(
+          position: offsetAnimation,
+          child: child,
+        );
+      },
+      transitionDuration: AppDurations.medium,
     );
   }
 }

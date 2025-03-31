@@ -12,6 +12,16 @@ class CompanyService {
 
   // Get companies with pagination
 
+  Future<List<String>> getCategories() async {
+    // Load JSON from local assets
+    String jsonString =
+        await rootBundle.loadString('assets/json/companies.json');
+    Map<String, dynamic> jsonData = json.decode(jsonString);
+
+    // Extract category keys and return as a list
+    return jsonData.keys.toList();
+  }
+
   Future<List<Company>> getCompanies({
     String? category,
     String? searchQuery,
