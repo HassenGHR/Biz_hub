@@ -10,7 +10,7 @@ class Company {
   final String phone;
   final String? website;
   final String imageUrl;
-  final GeoPoint location;
+  final GeoPoint? location;
   final int thumbsUp;
   final double ratings;
   final int thumbsDown;
@@ -30,7 +30,7 @@ class Company {
     required this.ratings,
     this.website,
     required this.imageUrl,
-    required this.location,
+    this.location,
     required this.thumbsUp,
     required this.thumbsDown,
     required this.createdAt,

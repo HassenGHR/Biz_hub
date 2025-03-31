@@ -33,8 +33,7 @@ class MyApp extends StatelessWidget {
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             initialRoute: '/',
-            onGenerateRoute:
-                AppRoutes.onGenerateRoute, // Removed the parentheses
+            onGenerateRoute: AppRoutes.onGenerateRoute,
           );
         },
       ),

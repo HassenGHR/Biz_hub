@@ -1,6 +1,7 @@
 import 'package:biz_hub/screens/auth/forget_password_screen.dart';
 import 'package:biz_hub/screens/auth/login_screen.dart';
 import 'package:biz_hub/screens/auth/signup_screen.dart';
+import 'package:biz_hub/screens/company/add_comapny_screen.dart';
 import 'package:biz_hub/screens/company/company_detail_screen.dart';
 import 'package:biz_hub/screens/company/edit_comapny_details_screen.dart';
 import 'package:biz_hub/screens/home/home_screen.dart';
@@ -17,6 +18,7 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String home = '/';
   static const String companyDetail = '/company';
+  static const String addCompany = '/company/add';
   static const String editCompany = '/company/edit';
   static const String userProfile = '/profile';
   static const String editProfile = '/profile/edit';
@@ -57,6 +59,14 @@ class AppRoutes {
       //     );
       //   }
       //   return _errorRoute();
+
+      case addCompany:
+        try {
+          return MaterialPageRoute(builder: (_) => AddCompanyScreen());
+        } catch (e) {
+          print("Error in addCompany route: $e");
+          return _errorRoute();
+        }
 
       // Profile Routes
       case userProfile:

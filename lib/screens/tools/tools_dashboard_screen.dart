@@ -41,7 +41,7 @@ class ToolsDashboardScreen extends StatelessWidget {
                     title: 'Resume Builder',
                     description: 'Create professional resumes with templates',
                     icon: Icons.description,
-                    color: AppColors.textPrimaryLight,
+                    color: AppColors.cardLight,
                     onTap: () {
                       Navigator.pushNamed(context, '/tools/resume-builder');
                     },
@@ -50,7 +50,7 @@ class ToolsDashboardScreen extends StatelessWidget {
                     title: 'Text Extraction',
                     description: 'Extract text from images and documents',
                     icon: Icons.text_fields,
-                    color: AppColors.textSecondaryLight,
+                    color: AppColors.cardLight,
                     onTap: () {
                       Navigator.pushNamed(context, '/tools/text-extraction');
                     },
@@ -59,7 +59,7 @@ class ToolsDashboardScreen extends StatelessWidget {
                     title: 'Business Card Scanner',
                     description: 'Scan business cards to save contacts',
                     icon: Icons.contact_mail,
-                    color: AppColors.textPrimaryLight,
+                    color: AppColors.cardLight,
                     onTap: () {
                       Navigator.pushNamed(context, '/tools/card-scanner');
                     },
