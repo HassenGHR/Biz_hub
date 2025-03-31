@@ -57,6 +57,7 @@ lib/
 │   └── resume.dart           // Resume model
 ├── screens/                  // App screens
 │   ├── home/                 // Home screen
+│   ├── splash/               // splash screens
 │   ├── company/              // Company screens
 │   ├── auth/                 // Authentication screens
 │   ├── profile/              // User profile screens

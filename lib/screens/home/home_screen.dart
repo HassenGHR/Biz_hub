@@ -1,7 +1,9 @@
 import 'package:biz_hub/config/routes.dart';
 import 'package:biz_hub/config/theme.dart';
 import 'package:biz_hub/models/company.dart';
+import 'package:biz_hub/screens/company/add_comapny_screen.dart';
 import 'package:biz_hub/screens/home/menu/menu_screen.dart';
+import 'package:biz_hub/screens/home/notifications/notifications_screen.dart';
 import 'package:biz_hub/screens/profile/user_profile_screen.dart';
 import 'package:biz_hub/screens/tools/tools_dashboard_screen.dart';
 import 'package:biz_hub/services/comapny_service.dart';
@@ -530,42 +532,64 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   bottom: PreferredSize(
                     preferredSize: const Size.fromHeight(48),
                     child: Container(
-                      color: theme.scaffoldBackgroundColor,
-                      child: TabBar(
-                        controller: _tabController,
-                        isScrollable: true,
-                        labelColor: AppColors.primaryColor,
-                        unselectedLabelColor: theme.hintColor,
-                        indicatorSize: TabBarIndicatorSize.label,
-                        indicatorWeight: 3,
-                        indicatorColor: AppColors.primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        tabs: _categories.map((category) {
-                          return Tab(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                color: _currentCategory == category
-                                    ? AppColors.primaryColor.withOpacity(0.1)
-                                    : Colors.transparent,
-                              ),
-                              child: Text(
-                                category,
-                                style: TextStyle(
-                                  fontWeight: _currentCategory == category
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              ),
+                        color: theme.scaffoldBackgroundColor,
+                        child:
+                            // Replace the TabBar in your code with this horizontal scrollable list of category containers
+                            Container(
+                          height: 48,
+                          color: theme.scaffoldBackgroundColor,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Row(
+                              children: _categories.map((category) {
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _currentCategory = category;
+                                      });
+                                      // Add any additional logic needed when category changes
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(30),
+                                        color: _currentCategory == category
+                                            ? AppColors.primaryColor
+                                                .withOpacity(0.1)
+                                            : Colors.transparent,
+                                        border: Border.all(
+                                          color: _currentCategory == category
+                                              ? AppColors.primaryColor
+                                              : theme.dividerColor,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        category,
+                                        style: TextStyle(
+                                          color: _currentCategory == category
+                                              ? AppColors.primaryColor
+                                              : theme.hintColor,
+                                          fontWeight:
+                                              _currentCategory == category
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                          ),
+                        )),
                   ),
                 ),
               ];
@@ -650,14 +674,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: theme.colorScheme.surface,
         child: Container(
           height: 60,
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 2.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(0, Icons.business, 'Companies'),
+              _buildNavItem(0, Icons.home, 'Home'),
               _buildNavItem(1, Icons.build, 'Tools'),
-              _buildNavItem(2, Icons.person, 'Profile'),
-              _buildNavItem(3, Icons.menu, 'Menu'),
+              _buildNavItem(2, Icons.add, 'Add'),
+              _buildNavItem(3, Icons.notifications, 'Notifications'),
+              _buildNavItem(4, Icons.menu, 'Menu'),
             ],
           ),
         ),
@@ -743,7 +768,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              UserProfileScreen(userId: ''),
+              AddCompanyScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
@@ -762,6 +787,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
     } else if (index == 3) {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const NotificationsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOutCubic;
+
+            var tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var offsetAnimation = animation.drive(tween);
+
+            return SlideTransition(
+              position: offsetAnimation,
+              child: child,
+            );
+          },
+          transitionDuration: AppDurations.medium,
+        ),
+      );
+    } else if (index == 4) {
       Navigator.push(
         context,
         PageRouteBuilder(
