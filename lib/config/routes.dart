@@ -4,6 +4,7 @@ import 'package:biz_hub/screens/auth/signup_screen.dart';
 import 'package:biz_hub/screens/company/company_detail_screen.dart';
 import 'package:biz_hub/screens/company/edit_comapny_details_screen.dart';
 import 'package:biz_hub/screens/home/home_screen.dart';
+import 'package:biz_hub/screens/home/notifications/notifications_screen.dart';
 import 'package:biz_hub/screens/profile/edit-profile_screen.dart';
 import 'package:biz_hub/screens/profile/user_profile_screen.dart';
 import 'package:biz_hub/screens/splash/splash_screen.dart';
@@ -18,6 +19,8 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String splash = '/splash';
   static const String home = '/home';
+  static const String notifications = '/notifications';
+
   static const String companyDetail = '/company';
   static const String addCompany = '/company/add';
   static const String editCompany = '/company/edit';
@@ -45,6 +48,9 @@ class AppRoutes {
       // Home Route
       case home:
         return MaterialPageRoute(builder: (_) => HomeScreen());
+
+      case notifications:
+        return MaterialPageRoute(builder: (_) => NotificationsScreen());
 
       // Company Routes
       // case companyDetail:
