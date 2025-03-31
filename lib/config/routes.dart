@@ -1,7 +1,6 @@
 import 'package:biz_hub/screens/auth/forget_password_screen.dart';
 import 'package:biz_hub/screens/auth/login_screen.dart';
 import 'package:biz_hub/screens/auth/signup_screen.dart';
-import 'package:biz_hub/screens/company/add_comapny_screen.dart';
 import 'package:biz_hub/screens/company/company_detail_screen.dart';
 import 'package:biz_hub/screens/company/edit_comapny_details_screen.dart';
 import 'package:biz_hub/screens/home/home_screen.dart';
@@ -58,14 +57,14 @@ class AppRoutes {
       // case editCompany:
       //   if (args is String) {
       //     return MaterialPageRoute(
-      //       builder: (_) => EditCompanyScreen(companyId: args)
+      //       builder: (_) => CompanyFormScreen()
       //     );
       //   }
       //   return _errorRoute();
 
       case addCompany:
         try {
-          return MaterialPageRoute(builder: (_) => AddCompanyScreen());
+          return MaterialPageRoute(builder: (_) => const CompanyFormScreen());
         } catch (e) {
           print("Error in addCompany route: $e");
           return _errorRoute();

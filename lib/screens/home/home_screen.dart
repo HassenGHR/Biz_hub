@@ -2,7 +2,7 @@ import 'package:biz_hub/config/routes.dart';
 import 'package:biz_hub/config/theme.dart';
 import 'package:biz_hub/models/company.dart';
 import 'package:biz_hub/models/user.dart';
-import 'package:biz_hub/screens/company/add_comapny_screen.dart';
+import 'package:biz_hub/screens/company/edit_comapny_details_screen.dart';
 import 'package:biz_hub/screens/home/menu/menu_screen.dart';
 import 'package:biz_hub/screens/home/notifications/notifications_screen.dart';
 import 'package:biz_hub/screens/profile/user_profile_screen.dart';
@@ -858,7 +858,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case 2: // Add Company
         Navigator.push(
           context,
-          _createPageRoute(const AddCompanyScreen()),
+          _createPageRoute(const CompanyFormScreen()),
         );
         break;
       case 3: // Notifications

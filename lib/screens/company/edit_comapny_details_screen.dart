@@ -6,16 +6,19 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../models/company.dart';
 
-class EditCompanyScreen extends StatefulWidget {
-  final Company company;
+class CompanyFormScreen extends StatefulWidget {
+  final Company? company;
+  final bool isEditing;
 
-  const EditCompanyScreen({Key? key, required this.company}) : super(key: key);
+  const CompanyFormScreen({Key? key, this.company})
+      : isEditing = company != null,
+        super(key: key);
 
   @override
-  _EditCompanyScreenState createState() => _EditCompanyScreenState();
+  _CompanyFormScreenState createState() => _CompanyFormScreenState();
 }
 
-class _EditCompanyScreenState extends State<EditCompanyScreen> {
+class _CompanyFormScreenState extends State<CompanyFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final CompanyService _companyService = CompanyService();
   final StorageService _storageService = StorageService();
@@ -33,29 +36,52 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
   bool _isLoading = false;
   bool _isEdited = false;
 
-  final List<String> _categories = [
-    'Technology',
-    'Retail',
-    'Healthcare',
-    'Food',
-    'Services',
-    'Education',
-    'Finance',
-    'Other'
-  ];
+  List<String> _categories = [];
+
+  void _loadCategories() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final categoriesSet = await _companyService.getCategories();
+      setState(() {
+        _categories = categoriesSet.toSet().toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showErrorSnackBar('Error loading categories: ${e.toString()}');
+    }
+  }
+
+  String limitTitleLength(String? title, {int maxLength = 35}) {
+    if (title == null || title.isEmpty) return '';
+
+    return title.length > maxLength
+        ? '${title.substring(0, maxLength)}...'
+        : title;
+  }
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.company.name);
-    _addressController = TextEditingController(text: widget.company.address);
-    _phoneController = TextEditingController(text: widget.company.phone);
-    _emailController = TextEditingController(text: widget.company.email ?? '');
+    _loadCategories();
+    _nameController = TextEditingController(text: widget.company?.name ?? "");
+    _addressController =
+        TextEditingController(text: widget.company?.address ?? "");
+    _phoneController = TextEditingController(text: widget.company?.phone ?? "");
+    _emailController = TextEditingController(text: widget.company?.email ?? '');
     _websiteController =
-        TextEditingController(text: widget.company.website ?? '');
+        TextEditingController(text: widget.company?.website ?? '');
     _descriptionController =
-        TextEditingController(text: widget.company.description ?? '');
-    _selectedCategory = widget.company.category;
+        TextEditingController(text: widget.company?.description ?? '');
+    _selectedCategory = widget.company?.category ?? "";
+
+    // For new company, don't consider initial state as edited
+    _isEdited = widget.isEditing ? false : true;
 
     // Add listeners to track changes
     _nameController.addListener(_onFormChanged);
@@ -83,79 +109,217 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
     });
   }
 
-  Future<void> _pickImage() async {
-    final XFile? pickedFile =
-        await _picker.pickImage(source: ImageSource.gallery);
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        _isEdited = true;
-      });
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final bottomSheetResult = await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Choose Company Image",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildImageSourceOption(
+                      icon: Icons.camera_alt,
+                      label: "Camera",
+                      onTap: () => Navigator.pop(context, ImageSource.camera),
+                    ),
+                    _buildImageSourceOption(
+                      icon: Icons.photo_library,
+                      label: "Gallery",
+                      onTap: () => Navigator.pop(context, ImageSource.gallery),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (bottomSheetResult != null) {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: bottomSheetResult,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _isEdited = true;
+        });
+      }
     }
   }
 
+  Widget _buildImageSourceOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              icon,
+              color: Theme.of(context).primaryColor,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveCompany() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      String? imageUrl = widget.company.imageUrl;
+      String? imageUrl;
 
       // Upload new image if selected
       if (_imageFile != null) {
-        imageUrl =
-            await _storageService.uploadFile(_imageFile!, widget.company.id);
+        // For editing, use existing ID, for new company create a temporary ID
+        final String fileId = widget.isEditing
+            ? widget.company!.id
+            : DateTime.now().millisecondsSinceEpoch.toString();
+
+        imageUrl = await _storageService.uploadFile(_imageFile!, fileId);
+      } else if (widget.isEditing) {
+        // Keep existing image if no new one was selected
+        imageUrl = widget.company?.imageUrl;
       }
 
-      // Create updated company object
-      final updatedCompany = Company(
-        id: widget.company.id,
-        name: _nameController.text,
-        address: _addressController.text,
-        phone: _phoneController.text,
-        email: _emailController.text.isEmpty ? null : _emailController.text,
-        website:
-            _websiteController.text.isEmpty ? null : _websiteController.text,
-        category: _selectedCategory,
-        description: _descriptionController.text.isEmpty
-            ? null
-            : _descriptionController.text,
-        imageUrl: imageUrl,
-        ratings: widget.company.ratings,
-        updatedAt: DateTime.now(),
-        location: widget.company.location,
-        thumbsUp: widget.company.thumbsUp,
-        thumbsDown: widget.company.thumbsDown,
-        createdAt: widget.company.createdAt,
-        createdBy: widget.company.createdBy,
-        lastUpdatedBy: widget.company.lastUpdatedBy,
-      );
+      final DateTime now = DateTime.now();
 
-      // Update company in database
-      await _companyService.editCompany(widget.company.id, updatedCompany);
+      if (widget.isEditing) {
+        // Update existing company
+        final updatedCompany = Company(
+          id: widget.company!.id,
+          name: _nameController.text,
+          address: _addressController.text,
+          phone: _phoneController.text,
+          email: _emailController.text.isEmpty ? null : _emailController.text,
+          website:
+              _websiteController.text.isEmpty ? null : _websiteController.text,
+          category: _selectedCategory,
+          description: _descriptionController.text.isEmpty
+              ? null
+              : _descriptionController.text,
+          imageUrl: imageUrl ?? "",
+          ratings: widget.company!.ratings,
+          updatedAt: now,
+          location: widget.company!.location,
+          thumbsUp: widget.company!.thumbsUp,
+          thumbsDown: widget.company!.thumbsDown,
+          createdAt: widget.company!.createdAt,
+          createdBy: widget.company!.createdBy,
+          lastUpdatedBy: widget.company!.lastUpdatedBy,
+        );
+
+        await _companyService.editCompany(widget.company!.id, updatedCompany);
+        _showSuccessSnackBar('Company updated successfully');
+      } else {
+        // Create new company
+        final newCompany = Company(
+          id: '', // This will be assigned by the service
+          name: _nameController.text,
+          address: _addressController.text,
+          phone: _phoneController.text,
+          email: _emailController.text.isEmpty ? null : _emailController.text,
+          website:
+              _websiteController.text.isEmpty ? null : _websiteController.text,
+          category: _selectedCategory,
+          description: _descriptionController.text.isEmpty
+              ? null
+              : _descriptionController.text,
+          imageUrl: imageUrl ?? "",
+          ratings: 0.0,
+          updatedAt: now,
+          createdAt: now,
+          thumbsUp: 0,
+          thumbsDown: 0,
+          // These fields might need to be set depending on your app's auth system
+          createdBy: "System",
+          lastUpdatedBy:
+              widget.company == null ? "System" : widget.company!.lastUpdatedBy,
+          location: null,
+        );
+
+        await _companyService.addCompany(newCompany);
+        _showSuccessSnackBar('Company added successfully');
+      }
 
       setState(() {
         _isLoading = false;
         _isEdited = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Company updated successfully')),
-      );
-
       Navigator.pop(context);
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating company: ${e.toString()}')),
-      );
+      _showErrorSnackBar(
+          'Error ${widget.isEditing ? "updating" : "adding"} company: ${e.toString()}');
     }
   }
 
@@ -169,6 +333,9 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
         title: const Text('Discard changes?'),
         content: const Text(
             'You have unsaved changes. Are you sure you want to discard them?'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -176,6 +343,9 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
             child: const Text('Discard'),
           ),
         ],
@@ -191,194 +361,363 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Edit Company'),
+          title: Text(widget.isEditing ? 'Edit Company' : 'Add Company'),
+          elevation: 0,
           actions: [
-            TextButton(
+            TextButton.icon(
               onPressed: _isEdited && !_isLoading ? _saveCompany : null,
-              child: Text(
-                'Save',
-                style: TextStyle(
-                  color: _isEdited && !_isLoading
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.5),
-                ),
+              icon: const Icon(Icons.check),
+              label: const Text('Save'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
               ),
             ),
           ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Company Logo/Image
-                      Center(
-                        child: GestureDetector(
-                          onTap: _pickImage,
-                          child: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 60,
-                                backgroundImage: _imageFile != null
-                                    ? FileImage(_imageFile!)
-                                    : (widget.company.imageUrl != null
-                                        ? NetworkImage(widget.company.imageUrl!)
-                                        : null) as ImageProvider?,
-                                child: widget.company.imageUrl == null &&
-                                        _imageFile == null
-                                    ? const Icon(Icons.business, size: 60)
-                                    : null,
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.white,
-                                    size: 20,
+            : SafeArea(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header section with company image
+                          Center(
+                            child: Column(
+                              children: [
+                                GestureDetector(
+                                  onTap: _pickImage,
+                                  child: Stack(
+                                    children: [
+                                      Container(
+                                        width: 120,
+                                        height: 120,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.grey.shade200,
+                                          border: Border.all(
+                                            color: Colors.grey.shade300,
+                                            width: 2,
+                                          ),
+                                          image: _imageFile != null
+                                              ? DecorationImage(
+                                                  image: FileImage(_imageFile!),
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : widget.isEditing &&
+                                                      widget.company!
+                                                              .imageUrl !=
+                                                          null &&
+                                                      widget.company!.imageUrl!
+                                                          .isNotEmpty
+                                                  ? DecorationImage(
+                                                      image: NetworkImage(widget
+                                                          .company!.imageUrl!),
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : null,
+                                        ),
+                                        child: (_imageFile == null &&
+                                                (!widget.isEditing ||
+                                                    widget.company!.imageUrl ==
+                                                        null ||
+                                                    widget.company!.imageUrl!
+                                                        .isEmpty))
+                                            ? Icon(
+                                                Icons.business,
+                                                size: 60,
+                                                color: Colors.grey.shade400,
+                                              )
+                                            : null,
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.camera_alt,
+                                            color: Colors.white,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Company Logo',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Form Section Title - Basic Info
+                          _buildSectionTitle('Basic Information'),
+                          const SizedBox(height: 16),
+
+                          // Company Name
+                          _buildTextField(
+                            controller: _nameController,
+                            label: 'Company Name',
+                            icon: Icons.business,
+                            isRequired: true,
+                            validator: Validators.validateName,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Category Dropdown
+                          _buildDropdownField(),
+                          const SizedBox(height: 24),
+
+                          // Form Section Title - Contact Details
+                          _buildSectionTitle('Contact Details'),
+                          const SizedBox(height: 16),
+
+                          // Address
+                          _buildTextField(
+                            controller: _addressController,
+                            label: 'Address',
+                            icon: Icons.location_on,
+                            isRequired: true,
+                            validator: Validators.validateAddress,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Phone
+                          _buildTextField(
+                            controller: _phoneController,
+                            label: 'Phone Number',
+                            icon: Icons.phone,
+                            isRequired: true,
+                            keyboardType: TextInputType.phone,
+                            validator: Validators.validatePhone,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Email
+                          _buildTextField(
+                            controller: _emailController,
+                            label: 'Email',
+                            icon: Icons.email,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) => value!.isNotEmpty
+                                ? Validators.validateEmail(value)
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Website
+                          _buildTextField(
+                            controller: _websiteController,
+                            label: 'Website',
+                            icon: Icons.language,
+                            keyboardType: TextInputType.url,
+                            validator: (value) => value!.isNotEmpty
+                                ? Validators.validateUrl(value)
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Form Section Title - Additional Info
+                          _buildSectionTitle('Additional Information'),
+                          const SizedBox(height: 16),
+
+                          // Description
+                          _buildDescriptionField(),
+                          const SizedBox(height: 40),
+
+                          // Save Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              onPressed: _isEdited && !_isLoading
+                                  ? _saveCompany
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.grey.shade300,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
                               ),
-                            ],
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      widget.isEditing
+                                          ? 'Save Changes'
+                                          : 'Add Company',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-
-                      // Company Name
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Company Name *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) => Validators.validateName(
-                          value,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Category Dropdown
-                      DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        decoration: const InputDecoration(
-                          labelText: 'Category *',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _categories.map((category) {
-                          return DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedCategory = value;
-                              _isEdited = true;
-                            });
-                          }
-                        },
-                        validator: (value) => Validators.validateName(
-                          value,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Address
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'Address *',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) => Validators.validateAddress(
-                          value,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Phone
-                      TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone Number *',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
-                        ),
-                        keyboardType: TextInputType.phone,
-                        validator: (value) => Validators.validatePhone(value),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Email
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) => value!.isNotEmpty
-                            ? Validators.validateEmail(value)
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Website
-                      TextFormField(
-                        controller: _websiteController,
-                        decoration: const InputDecoration(
-                          labelText: 'Website',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.language),
-                        ),
-                        keyboardType: TextInputType.url,
-                        validator: (value) => value!.isNotEmpty
-                            ? Validators.validateUrl(value)
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Description
-                      TextFormField(
-                        controller: _descriptionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(),
-                          alignLabelWithHint: true,
-                        ),
-                        maxLines: 5,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Save Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed:
-                              _isEdited && !_isLoading ? _saveCompany : null,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Save Changes'),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Divider(
+          color: Colors.grey.shade300,
+          thickness: 1,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isRequired = false,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: isRequired ? '$label *' : label,
+        prefixIcon: Icon(icon, color: Colors.grey.shade600),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      ),
+    );
+  }
+
+  Widget _buildDropdownField() {
+    return DropdownButtonFormField<String>(
+      value: _selectedCategory.isNotEmpty ? _selectedCategory : null,
+      validator: (value) => Validators.validateName(value),
+      decoration: InputDecoration(
+        labelText: 'Category *',
+        prefixIcon: Icon(Icons.category, color: Colors.grey.shade600),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      ),
+      items: _categories.map((category) {
+        return DropdownMenuItem(
+          value: category,
+          child: Text(limitTitleLength(category)),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          setState(() {
+            _selectedCategory = value;
+            _isEdited = true;
+          });
+        }
+      },
+      hint: const Text('Select a category'),
+    );
+  }
+
+  Widget _buildDescriptionField() {
+    return TextFormField(
+      controller: _descriptionController,
+      maxLines: 5,
+      decoration: InputDecoration(
+        labelText: 'Description',
+        alignLabelWithHint: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: const EdgeInsets.all(16),
+        hintText: 'Provide a description of your company...',
       ),
     );
   }
