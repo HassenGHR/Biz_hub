@@ -1,9 +1,11 @@
 import 'package:biz_hub/screens/auth/forget_password_screen.dart';
 import 'package:biz_hub/screens/auth/login_screen.dart';
 import 'package:biz_hub/screens/auth/signup_screen.dart';
+import 'package:biz_hub/screens/company/companies_screen.dart';
 import 'package:biz_hub/screens/company/company_detail_screen.dart';
 import 'package:biz_hub/screens/company/edit_comapny_details_screen.dart';
 import 'package:biz_hub/screens/home/home_screen.dart';
+import 'package:biz_hub/screens/home/menu/menu_screen.dart';
 import 'package:biz_hub/screens/home/notifications/notifications_screen.dart';
 import 'package:biz_hub/screens/profile/edit-profile_screen.dart';
 import 'package:biz_hub/screens/profile/user_profile_screen.dart';
@@ -20,6 +22,9 @@ class AppRoutes {
   static const String splash = '/splash';
   static const String home = '/home';
   static const String notifications = '/notifications';
+  static const String menu = '/menu';
+
+  static const String companies = '/companies';
 
   static const String companyDetail = '/company';
   static const String addCompany = '/company/add';
@@ -48,9 +53,14 @@ class AppRoutes {
       // Home Route
       case home:
         return MaterialPageRoute(builder: (_) => HomeScreen());
+      case menu:
+        return MaterialPageRoute(builder: (_) => MenuScreen());
 
       case notifications:
         return MaterialPageRoute(builder: (_) => NotificationsScreen());
+
+      case companies:
+        return MaterialPageRoute(builder: (_) => CompaniesScreen());
 
       // Company Routes
       // case companyDetail:

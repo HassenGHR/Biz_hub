@@ -267,46 +267,139 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
       bottomNavigationBar: Container(
+        height: 80,
         decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: Offset(0, -2),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: Offset(0, -3),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _onNavItemTapped,
-          elevation: 8,
-          backgroundColor: theme.colorScheme.surface,
-          selectedItemColor: AppColors.primaryColor,
-          unselectedItemColor: theme.hintColor,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(15),
+            topRight: Radius.circular(15),
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: _onNavItemTapped,
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            selectedItemColor: AppColors.primaryColor,
+            unselectedItemColor: theme.hintColor.withOpacity(0.6),
+            type: BottomNavigationBarType.fixed,
+            selectedLabelStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.build),
-              label: 'Tools',
+            unselectedLabelStyle: TextStyle(
+              fontSize: 11,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.add),
-              label: 'Add',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.business),
-              label: 'Companies',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.menu),
-              label: 'Menu',
-            ),
-          ],
+            items: [
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Icon(Icons.home_rounded),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: _buildActiveIcon(Icons.home_rounded),
+                ),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Icon(Icons.handyman_rounded),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: _buildActiveIcon(Icons.handyman_rounded),
+                ),
+                label: 'Tools',
+              ),
+              BottomNavigationBarItem(
+                icon: _buildAddButton(),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Icon(Icons.apartment_rounded),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: _buildActiveIcon(Icons.apartment_rounded),
+                ),
+                label: 'Companies',
+              ),
+              BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Icon(Icons.grid_view_rounded),
+                ),
+                activeIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: _buildActiveIcon(Icons.grid_view_rounded),
+                ),
+                label: 'Menu',
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActiveIcon(IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: EdgeInsets.all(8),
+      child: Icon(
+        icon,
+        color: AppColors.primaryColor,
+      ),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return Container(
+      height: 48,
+      width: 48,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryColor,
+            AppColors.primaryColor.withBlue(220)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryColor.withOpacity(0.3),
+            blurRadius: 8,
+            spreadRadius: 0,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.add_rounded,
+        color: Colors.white,
+        size: 30,
       ),
     );
   }
@@ -519,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             TextButton(
               onPressed: () {
-                // Navigator.pushNamed(context, AppRoutes.companies);
+                AppRoutes.navigateTo(context, AppRoutes.companies);
               },
               child: const Text('View All'),
             ),
@@ -675,30 +768,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Navigate based on index
     switch (index) {
       case 0: // Home - already here
+        AppRoutes.navigateTo(context, AppRoutes.home);
+
         break;
       case 1: // Tools
-        Navigator.push(
-          context,
-          _createPageRoute(const ToolsDashboardScreen()),
-        );
+
+        AppRoutes.navigateTo(context, AppRoutes.toolsDashboard);
+
         break;
       case 2: // Add Company
-        Navigator.push(
-          context,
-          _createPageRoute(const CompanyFormScreen()),
-        );
+
+        AppRoutes.navigateTo(context, AppRoutes.addCompany);
+
         break;
       case 3: // Notifications
-        Navigator.push(
-          context,
-          _createPageRoute(const CompaniesScreen()),
-        );
+
+        AppRoutes.navigateTo(context, AppRoutes.companies);
         break;
       case 4: // Menu
-        Navigator.push(
-          context,
-          _createPageRoute(const MenuScreen()),
-        );
+        AppRoutes.navigateTo(context, AppRoutes.menu);
+
         break;
     }
   }
